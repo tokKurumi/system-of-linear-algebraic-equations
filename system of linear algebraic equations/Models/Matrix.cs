@@ -209,21 +209,6 @@ namespace system_of_linear_algebraic_equations.Models
 			return GetMainDiagonalUnchecked(Data);
 		}
 
-		private static Matrix<T> ClearZeroRowsUnchecked(IEnumerable<IEnumerable<T>> matrix)
-		{
-			return new Matrix<T>(matrix.Where(row => isNotNullRow(row)));
-		}
-		public static Matrix<T> ClearZeroRows(IEnumerable<IEnumerable<T>> matrix)
-		{
-			ValidateInputArguments(matrix);
-
-			return ClearZeroRowsUnchecked(matrix);
-		}
-		public Matrix<T> ClearZeroRows()
-		{
-			return ClearZeroRowsUnchecked(Data);
-		}
-
 		public List<T> this[int index]
 		{
 			get => Data[index];
