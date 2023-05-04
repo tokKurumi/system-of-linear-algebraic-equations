@@ -1,5 +1,5 @@
-﻿using System;
-using System.Collections;
+﻿using System.Collections;
+using System.Linq.Expressions;
 using System.Numerics;
 using System.Text;
 
@@ -35,7 +35,6 @@ namespace system_of_linear_algebraic_equations.Models
 				Сoefficient = сoefficient;
 			}
 		}
-
 		public class InfiniteSolution : IEnumerable<MatrixCell>
 		{
 			public InfiniteSolution(int index, T freeValue)
@@ -80,13 +79,13 @@ namespace system_of_linear_algebraic_equations.Models
 			SystemMatrix = systemMatrix;
 			FreeVector = freeVector;
 
-			extended = new Matrix<T>(systemMatrix);
-			extended.AddColumn(freeVector);
+			Extended = new Matrix<T>(systemMatrix);
+			Extended.AddColumn(freeVector);
 		}
 
 		public Matrix<T> SystemMatrix { get; private set; }
 		public IEnumerable<T> FreeVector { get; private set; }
-		private Matrix<T> extended;
+		public Matrix<T> Extended;
 		private static IEnumerable<T> DevideRow(IEnumerable<T> row, T divider)
 		{
 			return row.Select(elem => elem / divider).ToList();
@@ -94,7 +93,7 @@ namespace system_of_linear_algebraic_equations.Models
 
 		public bool IsSolvable()
 		{
-			return SystemMatrix.Rank == extended.Rank;
+			return SystemMatrix.Rank == Extended.Rank;
 		}
 		public SolutionsCount NumSolutions()
 		{
@@ -113,42 +112,47 @@ namespace system_of_linear_algebraic_equations.Models
 
 		public IEnumerable<T> SolveSingle()
 		{
-			extended = extended.ToUpperTriangle();
-			extended = extended.ToLowerTriangle();
+			Extended = Extended.ToUpperTriangle();
+			Extended = Extended.ToLowerTriangle();
 
-			Parallel.For(0, extended.Count(), i =>
+			Parallel.For(0, Extended.Count(), i =>
 			{
-				extended[i][^1] /= extended[i][i];
-				extended[i][i] = T.One;
+				Extended[i][^1] /= Extended[i][i];
+				Extended[i][i] = T.One;
 			});
 
-			return extended.Select(x => x.Last());
+			return Extended.Select(x => x.Last());
 		}
 		public List<InfiniteSolution> SolveInfinite()
 		{
-			extended = extended.ToUpperTriangle();
-			extended = extended.ToLowerTriangle();
+			Extended = Extended.ToUpperTriangle();
+			Extended = Extended.ToLowerTriangle();
 
-			var notValueableList = extended.GetMainDiagonal().Select((elem, index) => new MatrixCell(index, elem)).Where(cell => cell.Сoefficient == T.Zero).Select(cell => cell.Index).ToArray();
+			var notValueableList =
+				Enumerable.Range(0, Extended.ColumnsCount - 1)
+				.Except(Extended.GetMainDiagonal()
+				.Select((elem, index) => new MatrixCell(index, elem))
+				.Where(cell => cell.Сoefficient != T.Zero)
+				.Select(cell => cell.Index));
 
-			Parallel.For(0, extended.RowsCount, i =>
+			Parallel.For(0, Extended.RowsCount, i =>
 			{
-				extended[i] = DevideRow(extended[i], extended[i, i]).ToList();
-				extended[i][i] = T.One;
+				Extended[i] = DevideRow(Extended[i], Extended[i, i]).ToList();
+				Extended[i, i] = T.One;
 			});
 
 			var result = new List<InfiniteSolution>();
-			for (int i = 0; i < extended.RowsCount; ++i)
+			for (int i = 0; i < Extended.RowsCount; ++i)
 			{
 				if(notValueableList.Contains(i))
 				{
 					continue;
 				}
 
-				var infSolution = new InfiniteSolution(i, extended[i][^1]);
+				var infSolution = new InfiniteSolution(i, Extended[i][^1]);
 				foreach (var notValueableIndex in notValueableList)
 				{
-					infSolution.Add(new MatrixCell(notValueableIndex, extended[i, notValueableIndex] * T.NegativeOne));
+					infSolution.Add(new MatrixCell(notValueableIndex, Extended[i, notValueableIndex] * T.NegativeOne));
 				}
 
 				result.Add(infSolution);
@@ -156,5 +160,22 @@ namespace system_of_linear_algebraic_equations.Models
 
 			return result;
 		}
+	}
+
+	public class Seidel<T>
+		where T : INumber<T>, ISignedNumber<T>
+	{
+		public Seidel(Matrix<T> systemMatrix, IEnumerable<T> freeVector)
+		{
+			SystemMatrix = systemMatrix;
+			FreeVector = freeVector;
+			Solve = FreeVector.Zip(SystemMatrix.GetMainDiagonal()).Select(elem => elem.First / elem.Second);
+		}
+
+		public Matrix<T> SystemMatrix { get; private set; }
+		public IEnumerable<T> FreeVector { get; private set; }
+		public IEnumerable<T> Solve { get; private set; }
+
+		
 	}
 }
