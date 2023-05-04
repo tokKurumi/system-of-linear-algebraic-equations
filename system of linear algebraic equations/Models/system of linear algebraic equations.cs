@@ -1,5 +1,4 @@
 ﻿using System.Collections;
-using System.Linq.Expressions;
 using System.Numerics;
 using System.Text;
 
@@ -123,7 +122,7 @@ namespace system_of_linear_algebraic_equations.Models
 
 			return Extended.Select(x => x.Last());
 		}
-		public List<InfiniteSolution> SolveInfinite()
+		public IEnumerable<InfiniteSolution> SolveInfinite()
 		{
 			Extended = Extended.ToUpperTriangle();
 			Extended = Extended.ToLowerTriangle();
@@ -133,7 +132,7 @@ namespace system_of_linear_algebraic_equations.Models
 				.Except(Extended.GetMainDiagonal()
 				.Select((elem, index) => new MatrixCell(index, elem))
 				.Where(cell => cell.Сoefficient != T.Zero)
-				.Select(cell => cell.Index));
+				.Select(cell => cell.Index)).ToArray();
 
 			Parallel.For(0, Extended.RowsCount, i =>
 			{
@@ -150,6 +149,8 @@ namespace system_of_linear_algebraic_equations.Models
 				}
 
 				var infSolution = new InfiniteSolution(i, Extended[i][^1]);
+				var test = notValueableList.GetEnumerator();
+
 				foreach (var notValueableIndex in notValueableList)
 				{
 					infSolution.Add(new MatrixCell(notValueableIndex, Extended[i, notValueableIndex] * T.NegativeOne));
@@ -169,13 +170,37 @@ namespace system_of_linear_algebraic_equations.Models
 		{
 			SystemMatrix = systemMatrix;
 			FreeVector = freeVector;
-			Solve = FreeVector.Zip(SystemMatrix.GetMainDiagonal()).Select(elem => elem.First / elem.Second);
+			Approximation = FreeVector.Zip(SystemMatrix.GetMainDiagonal()).Select(elem => elem.First / elem.Second).ToList();
 		}
 
 		public Matrix<T> SystemMatrix { get; private set; }
 		public IEnumerable<T> FreeVector { get; private set; }
-		public IEnumerable<T> Solve { get; private set; }
+		public List<T> Approximation { get; private set; }
 
-		
+		private T RowSumWithoutCur(int indexOfRow)
+		{
+			return SystemMatrix[indexOfRow]
+				.Zip(Approximation)
+				.Select(elem => elem.First * elem.Second)
+				.Where((elemValue, elemIndex) => elemIndex != indexOfRow)
+				.Aggregate(T.Zero, (accumulated, current) => accumulated + current);
+		}
+		public IEnumerable<T> Solve(T eps)
+		{
+			T currentEps = T.Zero;
+			do
+			{
+				var oldValue = new List<T>(Approximation);
+
+				for (int i = 0; i < Approximation.Count; ++i)
+				{
+					Approximation[i] = (FreeVector.ElementAt(i) - RowSumWithoutCur(i)) / SystemMatrix[i, i];
+				}
+
+				currentEps = oldValue.Zip(Approximation).Select(elem => (elem.Second - elem.First) / elem.Second).Max()!;
+			} while (currentEps > eps);
+
+			return Approximation;
+		}
 	}
 }

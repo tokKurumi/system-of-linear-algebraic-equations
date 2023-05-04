@@ -1,15 +1,15 @@
 ﻿//slae
-//testNone
-//testSingle
-//testInfinite1
-//testInfinite2
-//variant11
+//	testNone
+//	testSingle
+//	testInfinite1
+//	testInfinite2
+//	variant11
 
-//saidel
-//slae
+//seidel
+//	variant11
 
-#define slae
-#define testInfinite2
+#define seidel
+#define variant11
 
 using system_of_linear_algebraic_equations.Models;
 
@@ -18,7 +18,8 @@ public class Program
 #if slae
 	public static void Main()
 	{
-		Console.ForegroundColor = ConsoleColor.Cyan;
+      Console.WriteLine("slae");
+      Console.ForegroundColor = ConsoleColor.Cyan;
 #if testNone
 		//NO SOLUTIONS
 		var systemMatrix = new Matrix<double>
@@ -63,12 +64,11 @@ public class Program
 		//VARIANT 11
 		var systemMatrix = new Matrix<double>
 		{
-			{ 1, -2, 16, 0 },
-			{ 10, -1, 0, 1 },
-			{ 0, 12, 1, -1 },
-			{ 0, 2, 0, 16 }
+			{ 5, -1, 3 },
+			{ 1, -4, 2 },
+			{ 2, -1, 5 },
 		};
-		var freeVector = new double[] { 31, 0, -28, 29 };
+		var freeVector = new double[] { 5, 20, 10	};
 #endif
 
 		var slae = new SLAE<double>(systemMatrix, freeVector);
@@ -122,23 +122,38 @@ public class Program
 #if seidel
 	public static void Main()
 	{
+		Console.WriteLine("seidel");
+		Console.ForegroundColor = ConsoleColor.Cyan;
 #if variant11
 		//VARIANT 11
 		var systemMatrix = new Matrix<double>
 		{
-			{ 1, -2, 16, 0 },
-			{ 10, -1, 0, 1 },
-			{ 0, 12, 1, -1 },
-			{ 0, 2, 0, 16 }
+			{ 5, -1, 3 },
+			{ 1, -4, 2 },
+			{ 2, -1, 5 },
 		};
-		var freeVector = new double[] { 31, 0, -28, 29 };
+		var freeVector = new double[] { 5, 20, 10	};
 #endif
 
 		var seidel = new Seidel<double>(systemMatrix, freeVector);
-		foreach(var item in seidel.Solve)
+		systemMatrix.AddColumn(freeVector);
+		foreach (var row in systemMatrix)
 		{
-			Console.WriteLine(item);
+			foreach (var elem in row)
+			{
+				Console.Write($"{elem}\t");
+			}
+			Console.WriteLine();
 		}
+
+		Console.ForegroundColor = ConsoleColor.Yellow;
+		foreach (var solution in seidel.Solve(0.01))
+		{
+			Console.Write($"{solution} ");
+		}
+
+		Console.ForegroundColor = ConsoleColor.White;
+		Console.WriteLine();
 	}
 #endif
 }
